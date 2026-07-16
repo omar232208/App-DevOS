@@ -1,49 +1,68 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
 
-# dependencies
-node_modules
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Metro
+.metro-health-check*
 
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 
-# System Files
+# macOS
 .DS_Store
-Thumbs.db
+*.pem
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# Local history
+.history
+
+# Build artifacts
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# Test
+coverage/
+.nyc_output
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+/tmp/
+
+# pnpm
+.pnpm-store/
 
 # Replit
-.cache/
-.local/
+.replit.nix
