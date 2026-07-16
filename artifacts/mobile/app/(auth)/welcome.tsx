@@ -1,223 +1,279 @@
 import React, { useRef, useState } from 'react';
 import {
   Dimensions,
-  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   Pressable,
-  SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
-  ViewToken,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import Animated, {
+  FadeIn,
   FadeInDown,
   FadeInUp,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useColors } from '@/hooks/useColors';
-import { GradientButton } from '@/components/ui/GradientButton';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 const { width, height } = Dimensions.get('window');
 
 const slides = [
   {
-    id: '1',
-    icon: 'terminal',
-    iconLib: 'feather' as const,
+    id: '0',
+    icon: 'terminal' as const,
     title: 'Your Developer OS',
-    subtitle: 'A unified command center for everything you build — projects, tasks, code, and team — all in one premium experience.',
-    gradient: ['#0D0D20', '#1a1a3e', '#0D0D20'] as [string, string, string],
-    accentGradient: ['#6366F1', '#8B5CF6'] as [string, string],
-    dotColor: '#6366F1',
+    subtitle: 'A unified command center for everything you build — projects, tasks, code, and team.',
+    bg1: '#050510',
+    bg2: '#0D0D25',
+    accent1: '#6366F1',
+    accent2: '#8B5CF6',
+    orb1: '#6366F133',
+    orb2: '#8B5CF622',
+  },
+  {
+    id: '1',
+    icon: 'cpu' as const,
+    title: 'AI-Powered Dev',
+    subtitle: 'Your intelligent coding partner — explains, generates, fixes bugs, and thinks with you.',
+    bg1: '#050510',
+    bg2: '#150D25',
+    accent1: '#8B5CF6',
+    accent2: '#EC4899',
+    orb1: '#8B5CF633',
+    orb2: '#EC489922',
   },
   {
     id: '2',
-    icon: 'robot',
-    iconLib: 'material' as const,
-    title: 'AI-Powered',
-    subtitle: 'Your intelligent coding partner — explains code, generates solutions, fixes bugs, and thinks with you in real time.',
-    gradient: ['#0D0D20', '#1a0a3e', '#0D0D20'] as [string, string, string],
-    accentGradient: ['#8B5CF6', '#EC4899'] as [string, string],
-    dotColor: '#8B5CF6',
-  },
-  {
-    id: '3',
-    icon: 'layers',
-    iconLib: 'feather' as const,
+    icon: 'layers' as const,
     title: 'Build Without Limits',
-    subtitle: 'Manage projects, track goals, collaborate with your team, and ship faster than ever before.',
-    gradient: ['#0D0D20', '#0a1a3e', '#0D0D20'] as [string, string, string],
-    accentGradient: ['#3B82F6', '#6366F1'] as [string, string],
-    dotColor: '#3B82F6',
+    subtitle: 'Manage projects, track goals, collaborate with your team, and ship faster than ever.',
+    bg1: '#050510',
+    bg2: '#0D1525',
+    accent1: '#3B82F6',
+    accent2: '#6366F1',
+    orb1: '#3B82F633',
+    orb2: '#6366F122',
   },
 ];
 
-function SlideIcon({ icon, iconLib, colors: grad }: { icon: string; iconLib: 'feather' | 'material'; colors: [string, string] }) {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function SlideContent({ slide }: { slide: typeof slides[0] }) {
   return (
-    <View style={styles.iconContainer}>
-      <LinearGradient colors={grad} style={styles.iconGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        {iconLib === 'feather'
-          ? <Feather name={icon as any} size={48} color="#fff" />
-          : <MaterialCommunityIcons name={icon as any} size={52} color="#fff" />
-        }
-      </LinearGradient>
-      {/* Glow effect */}
-      <View style={[styles.glow, { backgroundColor: grad[0] + '33' }]} />
+    <View style={{ width, alignItems: 'center', paddingHorizontal: 32 }}>
+      {/* Icon with glow rings */}
+      <View style={styles.iconWrapper}>
+        {/* Outer glow ring */}
+        <View style={[styles.glowRing, styles.glowRingOuter, { borderColor: slide.accent1 + '22' }]} />
+        <View style={[styles.glowRing, styles.glowRingMid, { borderColor: slide.accent1 + '33' }]} />
+        {/* Icon box */}
+        <LinearGradient
+          colors={[slide.accent1, slide.accent2]}
+          style={styles.iconBox}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Feather name={slide.icon} size={52} color="#FFFFFF" />
+        </LinearGradient>
+      </View>
+
+      {/* Text */}
+      <Animated.View entering={FadeInDown.delay(150).duration(500)} style={styles.textBlock}>
+        <Text style={styles.slideTitle}>{slide.title}</Text>
+        <Text style={styles.slideSubtitle}>{slide.subtitle}</Text>
+      </Animated.View>
     </View>
   );
 }
 
 export default function WelcomeScreen() {
-  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const flatRef = useRef<FlatList>(null);
-  const topInset = Platform.OS === 'web' ? 67 : 0;
+  const btnScale = useSharedValue(1);
 
-  const onViewRef = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
-    if (viewableItems[0]) setActiveIndex(viewableItems[0].index ?? 0);
-  });
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
+
+  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+    setActiveIndex(idx);
+  }
+
+  function handlePressIn() {
+    btnScale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+  }
+  function handlePressOut() {
+    btnScale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  }
 
   function goNext() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (activeIndex < slides.length - 1) {
-      flatRef.current?.scrollToIndex({ index: activeIndex + 1 });
+    const next = activeIndex + 1;
+    if (next < slides.length) {
+      setActiveIndex(next);
+      scrollRef.current?.scrollTo({ x: next * width, animated: true });
     } else {
       router.replace('/(auth)/login');
     }
   }
 
-  function skip() {
-    router.replace('/(auth)/login');
-  }
+  const btnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnScale.value }],
+  }));
 
-  const currentSlide = slides[activeIndex];
+  const slide = slides[activeIndex];
 
   return (
     <View style={styles.root}>
-      <LinearGradient colors={currentSlide.gradient} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[slide.bg1, slide.bg2]} style={StyleSheet.absoluteFill} />
 
-      {/* Grid pattern overlay */}
-      <View style={styles.gridOverlay} />
+      {/* Decorative orbs */}
+      <View style={[styles.orb, styles.orb1, { backgroundColor: slide.orb1 }]} />
+      <View style={[styles.orb, styles.orb2, { backgroundColor: slide.orb2 }]} />
 
-      <SafeAreaView style={[styles.safeArea, { paddingTop: topInset }]}>
-        {/* Skip button */}
-        <Pressable onPress={skip} style={styles.skipBtn}>
+      {/* Grid overlay */}
+      <View style={styles.grid} />
+
+      {/* Top bar */}
+      <View style={[styles.topBar, { paddingTop: topPad + 8 }]}>
+        <View style={styles.logoRow}>
+          <LinearGradient colors={[slide.accent1, slide.accent2]} style={styles.logoMark} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Feather name="terminal" size={14} color="#fff" />
+          </LinearGradient>
+          <Text style={styles.logoText}>DevOS</Text>
+        </View>
+        <Pressable onPress={() => router.replace('/(auth)/login')}>
           <Text style={styles.skipText}>Skip</Text>
         </Pressable>
+      </View>
 
-        {/* Slides */}
-        <FlatList
-          ref={flatRef}
-          data={slides}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={item => item.id}
-          onViewableItemsChanged={onViewRef.current}
-          viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-          renderItem={({ item }) => (
-            <View style={{ width, alignItems: 'center', paddingHorizontal: 32 }}>
-              <Animated.View entering={FadeInUp.delay(100).duration(600)}>
-                <SlideIcon icon={item.icon} iconLib={item.iconLib} colors={item.accentGradient} />
-              </Animated.View>
+      {/* Slides */}
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleScroll}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+        bounces={false}
+        decelerationRate="fast"
+      >
+        {slides.map(s => (
+          <SlideContent key={s.id} slide={s} />
+        ))}
+      </ScrollView>
 
-              <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.textBlock}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.subtitle}>{item.subtitle}</Text>
-              </Animated.View>
-            </View>
-          )}
-        />
-
-        {/* Dots */}
+      {/* Bottom controls */}
+      <View style={[styles.bottom, { paddingBottom: botPad + 24 }]}>
+        {/* Dot indicators */}
         <View style={styles.dots}>
           {slides.map((s, i) => (
-            <View
+            <Pressable
               key={s.id}
-              style={[styles.dot, {
-                width: i === activeIndex ? 24 : 8,
-                backgroundColor: i === activeIndex ? s.dotColor : '#ffffff33',
-              }]}
-            />
+              onPress={() => {
+                setActiveIndex(i);
+                scrollRef.current?.scrollTo({ x: i * width, animated: true });
+              }}
+            >
+              <View style={[
+                styles.dot,
+                {
+                  width: i === activeIndex ? 28 : 8,
+                  backgroundColor: i === activeIndex ? slide.accent1 : '#ffffff33',
+                },
+              ]} />
+            </Pressable>
           ))}
         </View>
 
-        {/* CTA */}
-        <View style={styles.footer}>
-          <GradientButton
-            label={activeIndex === slides.length - 1 ? 'Get Started' : 'Continue'}
-            onPress={goNext}
-            size="lg"
-            style={styles.cta}
-          />
-          <Pressable onPress={() => router.replace('/(auth)/register')} style={{ marginTop: 16 }}>
-            <Text style={styles.registerText}>
-              New here? <Text style={{ color: '#818CF8', fontFamily: 'Inter_600SemiBold' }}>Create account</Text>
+        {/* Main CTA */}
+        <AnimatedPressable
+          style={[btnStyle, styles.btnWrapper]}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          onPress={goNext}
+        >
+          <LinearGradient
+            colors={[slide.accent1, slide.accent2]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.btn}
+          >
+            <Text style={styles.btnText}>
+              {activeIndex === slides.length - 1 ? 'Get Started' : 'Continue'}
             </Text>
-          </Pressable>
-        </View>
-      </SafeAreaView>
+            <Feather
+              name={activeIndex === slides.length - 1 ? 'arrow-right' : 'chevron-right'}
+              size={20}
+              color="#fff"
+            />
+          </LinearGradient>
+        </AnimatedPressable>
+
+        {/* Register link */}
+        <Pressable onPress={() => router.replace('/(auth)/register')} style={{ marginTop: 18, alignItems: 'center' }}>
+          <Text style={styles.altText}>
+            New here?{'  '}
+            <Text style={[styles.altLink, { color: slide.accent1 }]}>Create an account</Text>
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  gridOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.04,
-    backgroundColor: 'transparent',
+  orb: { position: 'absolute', borderRadius: 9999 },
+  orb1: { width: 320, height: 320, top: -80, right: -80 },
+  orb2: { width: 280, height: 280, bottom: 80, left: -100 },
+  grid: { ...StyleSheet.absoluteFillObject, opacity: 0.03 },
+  topBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 24, paddingBottom: 12,
   },
-  safeArea: { flex: 1 },
-  skipBtn: { alignSelf: 'flex-end', paddingHorizontal: 24, paddingVertical: 12 },
-  skipText: { color: '#ffffff88', fontSize: 15, fontFamily: 'Inter_500Medium' },
-  iconContainer: { alignItems: 'center', marginBottom: 8, marginTop: height * 0.05 },
-  iconGradient: {
-    width: 120,
-    height: 120,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    elevation: 12,
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  logoMark: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  logoText: { color: '#fff', fontSize: 17, fontFamily: 'Inter_700Bold' },
+  skipText: { color: '#ffffff55', fontSize: 14, fontFamily: 'Inter_500Medium' },
+  iconWrapper: { alignItems: 'center', justifyContent: 'center', marginTop: height * 0.04, marginBottom: 8 },
+  glowRing: { position: 'absolute', borderRadius: 9999, borderWidth: 1 },
+  glowRingOuter: { width: 220, height: 220 },
+  glowRingMid: { width: 175, height: 175 },
+  iconBox: {
+    width: 130, height: 130, borderRadius: 38,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#6366F1', shadowOffset: { width: 0, height: 16 }, shadowOpacity: 0.6, shadowRadius: 32, elevation: 16,
   },
-  glow: {
-    width: 160,
-    height: 60,
-    borderRadius: 80,
-    marginTop: -30,
-    zIndex: -1,
+  textBlock: { alignItems: 'center', marginTop: 44 },
+  slideTitle: {
+    fontSize: 34, fontFamily: 'Inter_700Bold', color: '#FFFFFF',
+    textAlign: 'center', letterSpacing: -0.8, marginBottom: 16,
   },
-  textBlock: { alignItems: 'center', marginTop: 40 },
-  title: {
-    fontSize: 32,
-    fontFamily: 'Inter_700Bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    marginBottom: 16,
-    letterSpacing: -0.5,
+  slideSubtitle: {
+    fontSize: 16, fontFamily: 'Inter_400Regular', color: '#ffffff77',
+    textAlign: 'center', lineHeight: 27, paddingHorizontal: 4,
   },
-  subtitle: {
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    color: '#ffffff88',
-    textAlign: 'center',
-    lineHeight: 26,
-    paddingHorizontal: 8,
-  },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingVertical: 24 },
+  bottom: { paddingHorizontal: 24 },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 24 },
   dot: { height: 8, borderRadius: 4 },
-  footer: { paddingHorizontal: 24, paddingBottom: Platform.OS === 'web' ? 34 : 24 },
-  cta: { width: '100%' },
-  registerText: { textAlign: 'center', color: '#ffffff55', fontSize: 14, fontFamily: 'Inter_400Regular' },
+  btnWrapper: { borderRadius: 18, overflow: 'hidden' },
+  btn: {
+    height: 58, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 8,
+  },
+  btnText: { color: '#fff', fontSize: 17, fontFamily: 'Inter_700Bold' },
+  altText: { color: '#ffffff44', fontSize: 14, fontFamily: 'Inter_400Regular' },
+  altLink: { fontFamily: 'Inter_600SemiBold' },
 });

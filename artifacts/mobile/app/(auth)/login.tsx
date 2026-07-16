@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,153 +12,217 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
-import { GradientButton } from '@/components/ui/GradientButton';
 import { useColors } from '@/hooks/useColors';
+import * as Haptics from 'expo-haptics';
+
+function SocialBtn({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable onPress={onPress} style={[styles.socialBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <Feather name={icon as any} size={18} color={colors.foreground} />
+      <Text style={[styles.socialLabel, { color: colors.foreground }]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function LoginScreen() {
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const topInset = Platform.OS === 'web' ? 67 : 0;
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [pwFocus, setPwFocus] = useState(false);
+
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
   async function handleLogin() {
-    if (!email || !password) { setError('Please fill in all fields'); return; }
+    if (!email.trim() || !password.trim()) {
+      setError('Please fill in all fields');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    }
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace('/(tabs)/');
-    } catch (_) {
+    } catch {
       setError('Login failed. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
     setLoading(false);
   }
 
-  const inputStyle = [styles.input, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.foreground }];
-
   return (
     <View style={styles.root}>
-      <LinearGradient colors={['#05050A', '#0D0D20', '#05050A']} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1, paddingTop: topInset }}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {/* Logo */}
-            <View style={styles.logoRow}>
-              <LinearGradient colors={[colors.primary, colors.accent]} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-                <Feather name="terminal" size={24} color="#fff" />
-              </LinearGradient>
-              <Text style={styles.logoText}>DevOS</Text>
+      <LinearGradient colors={['#05050A', '#0D0D22', '#05050A']} style={StyleSheet.absoluteFill} />
+      {/* Top orb */}
+      <View style={styles.topOrb} />
+
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingTop: topPad + 20, paddingBottom: botPad + 40 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Back */}
+          <Pressable onPress={() => router.replace('/(auth)/welcome')} style={styles.backBtn}>
+            <View style={[styles.backCircle, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Feather name="arrow-left" size={18} color={colors.foreground} />
             </View>
+          </Pressable>
 
-            <Text style={styles.heading}>Welcome back</Text>
-            <Text style={[styles.sub, { color: colors.mutedForeground }]}>Sign in to your workspace</Text>
+          {/* Header */}
+          <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
+            <LinearGradient colors={['#6366F1', '#8B5CF6']} style={styles.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Feather name="terminal" size={22} color="#fff" />
+            </LinearGradient>
+            <Text style={styles.title}>Welcome back</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Sign in to your workspace</Text>
+          </Animated.View>
 
-            {error ? (
-              <View style={[styles.errorBox, { backgroundColor: '#ef444422', borderColor: '#ef444466' }]}>
-                <Text style={{ color: '#ef4444', fontSize: 14, fontFamily: 'Inter_400Regular' }}>{error}</Text>
-              </View>
-            ) : null}
+          {/* Error */}
+          {error ? (
+            <Animated.View entering={FadeInDown.duration(300)} style={styles.errorBanner}>
+              <Feather name="alert-circle" size={14} color="#EF4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </Animated.View>
+          ) : null}
 
-            {/* Social buttons */}
-            <View style={styles.socialRow}>
-              {[
-                { icon: 'github', label: 'GitHub' },
-                { icon: 'google-circle', label: 'Google', lib: 'material' },
-              ].map(s => (
-                <Pressable
-                  key={s.label}
-                  style={[styles.socialBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-                  onPress={() => {}}
-                >
-                  <Feather name={s.icon as any} size={20} color={colors.foreground} />
-                  <Text style={[styles.socialLabel, { color: colors.foreground }]}>{s.label}</Text>
-                </Pressable>
-              ))}
-            </View>
+          {/* Social */}
+          <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.socialRow}>
+            <SocialBtn icon="github" label="GitHub" onPress={() => {}} />
+            <SocialBtn icon="globe" label="Google" onPress={() => {}} />
+          </Animated.View>
 
-            <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or continue with email</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-            </View>
+          <Animated.View entering={FadeInDown.delay(150).duration(500)} style={styles.divider}>
+            <View style={[styles.divLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.divText, { color: colors.mutedForeground }]}>or email</Text>
+            <View style={[styles.divLine, { backgroundColor: colors.border }]} />
+          </Animated.View>
 
-            {/* Email */}
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Email</Text>
-            <TextInput
-              style={inputStyle}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.mutedForeground}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-
-            {/* Password */}
-            <Text style={[styles.label, { color: colors.mutedForeground }]}>Password</Text>
-            <View style={styles.pwRow}>
+          {/* Fields */}
+          <Animated.View entering={FadeInDown.delay(200).duration(500)}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Email address</Text>
+            <View style={[styles.inputWrap, {
+              borderColor: emailFocus ? '#6366F1' : colors.border,
+              backgroundColor: colors.card,
+              shadowColor: emailFocus ? '#6366F1' : 'transparent',
+            }]}>
+              <Feather name="mail" size={16} color={emailFocus ? '#6366F1' : colors.mutedForeground} />
               <TextInput
-                style={[inputStyle, { flex: 1 }]}
+                style={[styles.input, { color: colors.foreground }]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                onFocus={() => setEmailFocus(true)}
+                onBlur={() => setEmailFocus(false)}
+              />
+            </View>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(250).duration(500)}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>Password</Text>
+            <View style={[styles.inputWrap, {
+              borderColor: pwFocus ? '#6366F1' : colors.border,
+              backgroundColor: colors.card,
+              shadowColor: pwFocus ? '#6366F1' : 'transparent',
+            }]}>
+              <Feather name="lock" size={16} color={pwFocus ? '#6366F1' : colors.mutedForeground} />
+              <TextInput
+                style={[styles.input, { color: colors.foreground }]}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="••••••••"
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry={!showPw}
                 autoComplete="password"
+                onFocus={() => setPwFocus(true)}
+                onBlur={() => setPwFocus(false)}
               />
-              <Pressable onPress={() => setShowPw(!showPw)} style={styles.eyeBtn}>
-                <Feather name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.mutedForeground} />
+              <Pressable onPress={() => setShowPw(!showPw)} hitSlop={12}>
+                <Feather name={showPw ? 'eye-off' : 'eye'} size={16} color={colors.mutedForeground} />
               </Pressable>
             </View>
+          </Animated.View>
 
-            <Pressable style={styles.forgotRow}>
-              <Text style={{ color: colors.primary, fontSize: 14, fontFamily: 'Inter_500Medium' }}>Forgot password?</Text>
+          <Pressable style={{ alignSelf: 'flex-end', marginBottom: 24, marginTop: 4 }}>
+            <Text style={{ color: '#6366F1', fontSize: 13, fontFamily: 'Inter_500Medium' }}>Forgot password?</Text>
+          </Pressable>
+
+          {/* Sign in button */}
+          <Animated.View entering={FadeInDown.delay(300).duration(500)}>
+            <Pressable
+              onPress={handleLogin}
+              disabled={loading}
+              style={({ pressed }) => [styles.signInBtn, { opacity: pressed || loading ? 0.8 : 1 }]}
+            >
+              <LinearGradient colors={['#6366F1', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.signInGradient}>
+                {loading
+                  ? <Text style={styles.signInText}>Signing in...</Text>
+                  : <><Text style={styles.signInText}>Sign In</Text><Feather name="arrow-right" size={18} color="#fff" /></>
+                }
+              </LinearGradient>
             </Pressable>
+          </Animated.View>
 
-            <GradientButton label="Sign In" onPress={handleLogin} loading={loading} size="lg" style={{ marginTop: 8 }} />
-
-            <Pressable onPress={() => router.replace('/(auth)/register')} style={{ marginTop: 24, alignItems: 'center' }}>
-              <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Inter_400Regular' }}>
-                No account? <Text style={{ color: colors.primary, fontFamily: 'Inter_600SemiBold' }}>Create one</Text>
-              </Text>
-            </Pressable>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+          <Pressable onPress={() => router.replace('/(auth)/register')} style={{ marginTop: 28, alignItems: 'center' }}>
+            <Text style={{ color: colors.mutedForeground, fontSize: 14, fontFamily: 'Inter_400Regular' }}>
+              No account yet?{'  '}
+              <Text style={{ color: '#6366F1', fontFamily: 'Inter_600SemiBold' }}>Create one</Text>
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  content: { paddingHorizontal: 24, paddingTop: 32, paddingBottom: 48 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 40 },
-  logoBox: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  logoText: { fontSize: 22, fontFamily: 'Inter_700Bold', color: '#FFFFFF' },
-  heading: { fontSize: 30, fontFamily: 'Inter_700Bold', color: '#FFFFFF', marginBottom: 8, letterSpacing: -0.5 },
-  sub: { fontSize: 15, fontFamily: 'Inter_400Regular', marginBottom: 28 },
-  errorBox: { borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 16 },
+  topOrb: {
+    position: 'absolute', width: 350, height: 350, borderRadius: 999,
+    backgroundColor: '#6366F114', top: -120, right: -80,
+  },
+  content: { paddingHorizontal: 24 },
+  backBtn: { marginBottom: 24, alignSelf: 'flex-start' },
+  backCircle: { width: 42, height: 42, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  header: { alignItems: 'flex-start', marginBottom: 28 },
+  logoBox: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  title: { fontSize: 32, fontFamily: 'Inter_700Bold', color: '#FFFFFF', letterSpacing: -0.7, marginBottom: 6 },
+  subtitle: { fontSize: 15, fontFamily: 'Inter_400Regular' },
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EF444415',
+    borderColor: '#EF444433', borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 16,
+  },
+  errorText: { color: '#EF4444', fontSize: 13, fontFamily: 'Inter_400Regular', flex: 1 },
   socialRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  socialBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, borderWidth: 1, borderRadius: 12, paddingVertical: 13,
-  },
-  socialLabel: { fontSize: 14, fontFamily: 'Inter_500Medium' },
+  socialBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderRadius: 14, paddingVertical: 14 },
+  socialLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  dividerLine: { flex: 1, height: 1 },
-  dividerText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  label: { fontSize: 13, fontFamily: 'Inter_500Medium', marginBottom: 8, marginTop: 4 },
-  input: {
-    borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 15, fontFamily: 'Inter_400Regular', marginBottom: 12,
+  divLine: { flex: 1, height: 1 },
+  divText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  label: { fontSize: 12, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5,
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, marginBottom: 16,
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 0,
   },
-  pwRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  eyeBtn: { position: 'absolute', right: 16, padding: 4 },
-  forgotRow: { alignItems: 'flex-end', marginBottom: 20 },
+  input: { flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular' },
+  signInBtn: { borderRadius: 16, overflow: 'hidden' },
+  signInGradient: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  signInText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_700Bold' },
 });
