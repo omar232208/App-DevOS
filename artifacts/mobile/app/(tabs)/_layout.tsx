@@ -3,56 +3,27 @@ import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="projects">
-        <Icon sf={{ default: 'folder', selected: 'folder.fill' }} />
-        <Label>Projects</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="ai">
-        <Icon sf={{ default: 'sparkles', selected: 'sparkles' }} />
-        <Label>AI</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="notes">
-        <Icon sf={{ default: 'note.text', selected: 'note.text.badge.plus' }} />
-        <Label>Notes</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
-
-function ClassicTabLayout() {
-  const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  const isIOS = Platform.OS === 'ios';
-  const isWeb = Platform.OS === 'web';
+export default function TabLayout() {
+  const colors  = useColors();
+  const scheme  = useColorScheme();
+  const isDark  = scheme === 'dark';
+  const isIOS   = Platform.OS === 'ios';
+  const isWeb   = Platform.OS === 'web';
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor:   colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: isIOS ? 'transparent' : colors.tabBar ?? colors.background,
-          borderTopWidth: isWeb ? 1 : StyleSheet.hairlineWidth,
-          borderTopColor: colors.border,
+          borderTopWidth:  isWeb ? 1 : StyleSheet.hairlineWidth,
+          borderTopColor:  colors.border,
           elevation: 0,
           ...(isWeb ? { height: 84, paddingBottom: 24 } : { height: 72, paddingBottom: 10 }),
         },
@@ -78,11 +49,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={22} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="house.fill" tintColor={color} size={22} /> : <Feather name="home" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -90,11 +57,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Projects',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="folder.fill" tintColor={color} size={22} />
-            ) : (
-              <Feather name="folder" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="folder.fill" tintColor={color} size={22} /> : <Feather name="folder" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -102,23 +65,15 @@ function ClassicTabLayout() {
         options={{
           title: 'AI',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="sparkles" tintColor={color} size={22} />
-            ) : (
-              <Feather name="cpu" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="sparkles" tintColor={color} size={22} /> : <Feather name="cpu" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="notes"
+        name="library"
         options={{
-          title: 'Notes',
+          title: 'Library',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="note.text" tintColor={color} size={22} />
-            ) : (
-              <Feather name="file-text" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="books.vertical.fill" tintColor={color} size={22} /> : <Feather name="book-open" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -126,20 +81,11 @@ function ClassicTabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.fill" tintColor={color} size={22} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.fill" tintColor={color} size={22} /> : <Feather name="user" size={22} color={color} />,
         }}
       />
+      {/* Hide old notes route from tab bar */}
+      <Tabs.Screen name="notes" options={{ href: null }} />
     </Tabs>
   );
-}
-
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
 }
